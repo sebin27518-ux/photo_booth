@@ -1,0 +1,1260 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>PHOTO</title>
+<style>
+  :root{
+    --paper:#FBF8F3;
+    --paper2:#F3EEE4;
+    --ink:#201C1A;
+    --pink:#FF4667;
+    --mint:#3FCBA0;
+    --yellow:#FFC94A;
+    --navy:#182238;
+    --line: rgba(32,28,26,0.14);
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Malgun Gothic", sans-serif;
+    overscroll-behavior: none;
+    -webkit-user-select:none; user-select:none;
+    height: 100dvh;
+    width:100%;
+    overflow:hidden;
+  }
+  button{ font-family:inherit; }
+  input[type=color]{ font-family:inherit; }
+
+  #app{
+    position:relative;
+    height:100dvh;
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    padding-top: var(--safe-t);
+    padding-bottom: var(--safe-b);
+    padding-left: var(--safe-l);
+    padding-right: var(--safe-r);
+  }
+
+  /* ---------- Film strip step bar ---------- */
+  #filmbar{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding: 10px 16px 8px;
+    background: var(--navy);
+    position:relative;
+  }
+  #backbtn{
+    position:absolute;
+    left:14px;
+    top:50%;
+    transform:translateY(-50%);
+    width:30px;height:30px;
+    border:none;
+    background:transparent;
+    color:#fff;
+    opacity:.85;
+    font-size:20px;
+    display:flex;align-items:center;justify-content:center;
+    visibility:hidden;
+  }
+  #backbtn.show{ visibility:visible; }
+  #steps-track{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    padding-left:30px;
+  }
+  .sprocket{
+    width:9px;height:9px;
+    border-radius:50%;
+    background: rgba(255,255,255,0.25);
+    transition: background .25s, transform .25s;
+  }
+  .sprocket.done{ background: var(--mint); }
+  .sprocket.active{ background: var(--pink); transform: scale(1.35); }
+
+  /* ---------- Stage ---------- */
+  #stage{
+    flex:1;
+    position:relative;
+    overflow:hidden;
+    background: var(--paper);
+  }
+  .screen{
+    position:absolute;
+    inset:0;
+    display:none;
+    flex-direction:column;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    padding: 22px 20px calc(96px + var(--safe-b));
+  }
+  .screen.active{ display:flex; }
+
+  .eyebrow{
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.14em;
+    color: var(--pink);
+    text-transform:uppercase;
+    margin:0 0 6px;
+  }
+  h1.title{
+    font-size: clamp(40px, 13vw, 64px);
+    font-weight:900;
+    letter-spacing:.02em;
+    margin: 0 0 6px;
+    line-height:.95;
+    font-family: -apple-system, "SF Pro Rounded", ui-rounded, system-ui, sans-serif;
+  }
+  h2.stepTitle{
+    font-size: clamp(21px, 6vw, 26px);
+    font-weight:800;
+    margin: 0 0 4px;
+    letter-spacing:-.01em;
+  }
+  p.sub{
+    font-size:14px;
+    color: rgba(32,28,26,.62);
+    margin: 0 0 18px;
+    line-height:1.5;
+  }
+
+  /* ---------- Home ---------- */
+  #home-screen{ align-items:center; justify-content:center; text-align:center; }
+  .home-flash{
+    width:64px;height:64px;
+    border-radius:50%;
+    background: var(--pink);
+    display:flex;align-items:center;justify-content:center;
+    margin: 0 auto 18px;
+    box-shadow: 0 8px 0 rgba(32,28,26,0.08);
+  }
+  .home-flash svg{ width:28px;height:28px; }
+  .home-tag{
+    font-size:14px;
+    color: rgba(32,28,26,.55);
+    max-width:280px;
+    margin: 10px auto 30px;
+    line-height:1.6;
+  }
+  .strip-hint{
+    display:flex; gap:8px; justify-content:center; margin-bottom:34px;
+  }
+  .strip-hint .card{
+    width:34px;height:46px;
+    background:#fff;
+    border-radius:4px;
+    box-shadow: 0 2px 6px rgba(32,28,26,.12);
+    border: 3px solid #fff;
+    outline:1px solid var(--line);
+    position:relative;
+    overflow:hidden;
+  }
+  .strip-hint .card i{
+    position:absolute; inset:3px 3px 10px;
+    border-radius:2px;
+  }
+  .strip-hint .card:nth-child(1) i{ background: var(--pink); }
+  .strip-hint .card:nth-child(2) i{ background: var(--yellow); }
+  .strip-hint .card:nth-child(3) i{ background: var(--mint); }
+  .strip-hint .card:nth-child(4) i{ background: var(--navy); }
+
+  /* ---------- Buttons ---------- */
+  .primary-btn{
+    appearance:none; border:none;
+    background: var(--ink);
+    color: #fff;
+    font-weight:800;
+    font-size:16px;
+    padding:16px 22px;
+    border-radius:16px;
+    width:100%;
+    cursor:pointer;
+    transition: transform .12s ease;
+  }
+  .primary-btn:active{ transform: scale(.97); }
+  .primary-btn[disabled]{ background: rgba(32,28,26,.22); }
+  .primary-btn.pink{ background: var(--pink); }
+
+  .footer-cta{
+    position:absolute;
+    left:20px; right:20px; bottom: calc(18px + var(--safe-b));
+  }
+
+  /* ---------- Choice grid (count) ---------- */
+  .choice-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+  }
+  .count-card{
+    border: 2px solid var(--line);
+    border-radius: 18px;
+    padding: 16px 10px 14px;
+    background:#fff;
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    cursor:pointer;
+  }
+  .count-card.selected{ border-color: var(--pink); background: #FFF1F4; }
+  .count-preview{ display:flex; gap:3px; }
+  .count-preview.grid2{ flex-direction:column; }
+  .count-preview.grid4{ flex-direction:column; }
+  .count-preview.grid6{ flex-wrap:wrap; width:34px; }
+  .count-preview.grid9{ flex-wrap:wrap; width:42px; }
+  .count-preview .cell{ background: var(--paper2); border:1px solid var(--line); border-radius:2px; }
+  .grid2 .cell{ width:26px; height:17px; }
+  .grid4 .cell{ width:20px; height:13px; }
+  .grid6 .cell{ width:14px; height:16px; }
+  .grid9 .cell{ width:12px; height:12px; }
+  .count-label{ font-weight:800; font-size:15px; }
+  .count-shots{ font-size:11.5px; color: rgba(32,28,26,.55); }
+
+  /* ---------- Palette ---------- */
+  .palette-row{ display:flex; flex-wrap:wrap; gap:12px; margin-bottom:22px; }
+  .swatch{
+    width:44px; height:44px; border-radius:50%;
+    border: 3px solid #fff;
+    outline: 1px solid var(--line);
+    cursor:pointer;
+    position:relative;
+  }
+  .swatch.selected{ outline: 3px solid var(--ink); }
+  .swatch.selected::after{
+    content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:16px; font-weight:900; text-shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+  .custom-color-row{ display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+  .custom-color-row label{ font-size:13px; font-weight:700; color: rgba(32,28,26,.65); }
+  .custom-color-row input[type=color]{
+    width:44px; height:44px; border-radius:50%; border:3px solid #fff; outline:1px solid var(--line);
+    padding:0; overflow:hidden; background:none; cursor:pointer;
+  }
+  .style-preview-wrap{ display:flex; justify-content:center; margin: 6px 0 22px; }
+  #stylePreviewCanvas{ width: 130px; height:auto; border-radius:10px; box-shadow:0 6px 18px rgba(32,28,26,.18); }
+
+  /* ---------- Filter chips ---------- */
+  .chip-row{ display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:16px; }
+  .chip{
+    flex:0 0 auto;
+    padding: 9px 16px;
+    border-radius: 999px;
+    border: 2px solid var(--line);
+    background:#fff;
+    font-size:13.5px;
+    font-weight:700;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .chip.selected{ background: var(--ink); color:#fff; border-color: var(--ink); }
+
+  /* ---------- Capture ---------- */
+  .camwrap{
+    position:relative;
+    width:100%;
+    max-width:360px;
+    aspect-ratio: 3/4;
+    margin: 0 auto 14px;
+    border-radius: 22px;
+    overflow:hidden;
+    background: var(--navy);
+  }
+  .camwrap video, .camwrap #captureImgPreview{
+    width:100%; height:100%; object-fit:cover; display:block;
+  }
+  .cam-count{
+    position:absolute; top:12px; right:12px;
+    background: rgba(0,0,0,.45);
+    color:#fff; font-size:12px; font-weight:800;
+    padding:6px 10px; border-radius:999px;
+  }
+  .countdown-num{
+    position:absolute; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    font-size:88px; font-weight:900; color:#fff;
+    text-shadow: 0 4px 12px rgba(0,0,0,.4);
+  }
+  .shutter-row{ display:flex; justify-content:center; align-items:center; gap:22px; margin: 6px 0 18px; }
+  .shutter-btn{
+    width:72px;height:72px; border-radius:50%;
+    background:#fff; border:5px solid var(--ink);
+    cursor:pointer;
+  }
+  .shutter-btn:active{ background: var(--pink); }
+  .flip-btn{
+    width:44px;height:44px; border-radius:50%;
+    background:#fff; border:2px solid var(--line);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:18px;
+  }
+  #camFallbackBtn{ display:none; }
+  .thumb-strip{ display:flex; gap:8px; overflow-x:auto; padding: 4px 2px; }
+  .thumb-strip img{ width:52px; height:69px; object-fit:cover; border-radius:8px; border:2px solid #fff; outline:1px solid var(--line); }
+
+  /* ---------- Select shots ---------- */
+  .shots-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
+  .shot-cell{ position:relative; border-radius:12px; overflow:hidden; aspect-ratio:3/4; cursor:pointer; outline:2px solid var(--line); }
+  .shot-cell img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .shot-cell.picked{ outline:3px solid var(--pink); }
+  .pick-badge{
+    position:absolute; top:6px; left:6px;
+    width:22px;height:22px; border-radius:50%;
+    background: var(--pink); color:#fff; font-size:12px; font-weight:900;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .select-status{ font-size:13px; font-weight:700; color: rgba(32,28,26,.6); margin-bottom:12px; }
+
+  /* ---------- Decorate ---------- */
+  .decorate-canvas-wrap{
+    position:relative; margin: 0 auto 14px; max-width: 280px;
+    box-shadow: 0 10px 28px rgba(32,28,26,.2); border-radius:8px; overflow:hidden;
+  }
+  .decorate-canvas-wrap canvas{ display:block; width:100%; height:auto; }
+  #drawCanvas{ position:absolute; inset:0; touch-action:none; }
+  .tool-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:8px; margin-bottom:10px; }
+  .tool-btn{
+    flex:0 0 auto; padding:9px 14px; border-radius:12px; border:2px solid var(--line);
+    background:#fff; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .tool-btn.selected{ background: var(--ink); color:#fff; border-color: var(--ink); }
+  .pen-color-row{ display:flex; gap:8px; overflow-x:auto; padding-bottom:6px; margin-bottom:10px; }
+  .pen-color{ width:30px;height:30px;border-radius:50%; border:2px solid #fff; outline:1px solid var(--line); flex:0 0 auto; cursor:pointer; }
+  .pen-color.selected{ outline:2.5px solid var(--ink); }
+  .stamp-row{ display:flex; gap:8px; margin-bottom:10px; }
+  .stamp-btn{ font-size:22px; background:#fff; border:2px solid var(--line); border-radius:10px; width:44px;height:44px; cursor:pointer; }
+  .stamp-btn.selected{ border-color: var(--pink); background:#FFF1F4; }
+  .size-row{ display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .size-row input[type=range]{ flex:1; }
+  .mini-btn{ font-size:12.5px; font-weight:700; color: var(--pink); background:none; border:none; text-decoration:underline; cursor:pointer; padding:4px; }
+
+  /* ---------- Result ---------- */
+  #result-screen{ align-items:center; text-align:center; }
+  #resultImg{ width:100%; max-width:280px; border-radius:8px; box-shadow: 0 12px 30px rgba(32,28,26,.22); margin-bottom:18px; }
+  .result-btn-row{ display:flex; gap:10px; width:100%; max-width:320px; margin-bottom:8px; }
+  #qrBox{ margin-top:18px; padding:16px; background:#fff; border-radius:16px; outline:1px solid var(--line); display:none; flex-direction:column; align-items:center; gap:8px; }
+  #qrCanvasHolder img, #qrCanvasHolder canvas{ image-rendering: pixelated; }
+  .qr-note{ font-size:11.5px; color: rgba(32,28,26,.5); max-width:220px; line-height:1.5; }
+
+  /* ---------- Flash / edge hint ---------- */
+  #flash{
+    position:fixed; inset:0; background:#fff; opacity:0; pointer-events:none; z-index:50;
+    transition: opacity .08s ease;
+  }
+  #edgeArrow{
+    position:fixed; top:50%; left:0; transform: translateY(-50%) translateX(-40px);
+    width:34px; height:34px; border-radius:50%;
+    background: var(--ink); color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0; z-index:60; pointer-events:none;
+    font-size:16px;
+    transition: opacity .1s linear;
+  }
+
+  @media (max-width:340px){
+    h1.title{ font-size: 44px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="filmbar">
+    <button id="backbtn" aria-label="뒤로">‹</button>
+    <div id="steps-track"></div>
+  </div>
+
+  <div id="stage">
+
+    <!-- HOME -->
+    <section class="screen active" id="home-screen" data-step="home">
+      <div class="home-flash">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M9 3L7 7H4a1 1 0 00-1 1v11a1 1 0 001 1h16a1 1 0 001-1V8a1 1 0 00-1-1h-3l-2-4H9z" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="13" r="3.4" stroke="#fff" stroke-width="1.6"/></svg>
+      </div>
+      <h1 class="title">PHOTO</h1>
+      <p class="home-tag">셀프 사진관을 그대로 옮겨왔어요.<br>프레임을 고르고, 찍고, 꾸며서 나만의 네컷을 만들어보세요.</p>
+      <div class="strip-hint"><div class="card"><i></i></div><div class="card"><i></i></div><div class="card"><i></i></div><div class="card"><i></i></div></div>
+      <button class="primary-btn pink" style="max-width:220px" id="startBtn">촬영 시작하기</button>
+    </section>
+
+    <!-- COUNT -->
+    <section class="screen" id="count-screen" data-step="count">
+      <div class="eyebrow">Step 1</div>
+      <h2 class="stepTitle">프레임을 골라주세요</h2>
+      <p class="sub">몇 컷짜리 프레임으로 찍을까요?</p>
+      <div class="choice-grid" id="countGrid"></div>
+    </section>
+
+    <!-- STYLE -->
+    <section class="screen" id="style-screen" data-step="style">
+      <div class="eyebrow">Step 2</div>
+      <h2 class="stepTitle">프레임 색을 골라주세요</h2>
+      <p class="sub">팔레트에서 바로 고르거나, 원하는 색을 직접 선택할 수 있어요.</p>
+      <div class="palette-row" id="paletteRow"></div>
+      <div class="custom-color-row">
+        <label for="customColor">직접 선택</label>
+        <input type="color" id="customColor" value="#FF4667">
+      </div>
+      <div class="style-preview-wrap"><canvas id="stylePreviewCanvas" width="220" height="360"></canvas></div>
+    </section>
+
+    <!-- FILTER -->
+    <section class="screen" id="filter-screen" data-step="filter">
+      <div class="eyebrow">Step 3</div>
+      <h2 class="stepTitle">촬영 필터를 골라주세요</h2>
+      <p class="sub">촬영 중에도 언제든 바꿀 수 있어요.</p>
+      <div class="chip-row" id="filterChips"></div>
+    </section>
+
+    <!-- CAPTURE -->
+    <section class="screen" id="capture-screen" data-step="capture">
+      <div class="eyebrow">Step 4</div>
+      <h2 class="stepTitle" id="captureTitle">촬영하기</h2>
+      <p class="sub">총 <span id="shotsNeededText"></span>장을 찍으면 마음에 드는 컷을 고를 수 있어요.</p>
+      <div class="chip-row" id="filterChipsCapture"></div>
+      <div class="camwrap">
+        <video id="camVideo" autoplay playsinline muted></video>
+        <img id="captureImgPreview" style="display:none;">
+        <div class="cam-count" id="camCountBadge">0 / 0</div>
+        <div class="countdown-num" id="countdownNum"></div>
+      </div>
+      <div class="shutter-row">
+        <button class="flip-btn" id="flipCamBtn" title="카메라 전환">⟳</button>
+        <button class="shutter-btn" id="shutterBtn"></button>
+        <div style="width:44px"></div>
+      </div>
+      <input type="file" id="camFallbackInput" accept="image/*" capture="user" style="display:none;">
+      <button class="primary-btn" id="camFallbackBtn">사진으로 촬영하기</button>
+      <div class="thumb-strip" id="thumbStrip"></div>
+    </section>
+
+    <!-- SELECT -->
+    <section class="screen" id="select-screen" data-step="select">
+      <div class="eyebrow">Step 5</div>
+      <h2 class="stepTitle">마음에 드는 컷을 골라주세요</h2>
+      <p class="select-status" id="selectStatus"></p>
+      <div class="shots-grid" id="shotsGrid"></div>
+    </section>
+
+    <!-- DECORATE -->
+    <section class="screen" id="decorate-screen" data-step="decorate">
+      <div class="eyebrow">Step 6</div>
+      <h2 class="stepTitle">사진을 꾸며주세요</h2>
+      <p class="sub">그림을 그리거나 스티커를 찍어서 프레임까지 자유롭게 꾸밀 수 있어요.</p>
+      <div class="tool-row" id="toolRow"></div>
+      <div class="pen-color-row" id="penColorRow"></div>
+      <div class="stamp-row" id="stampRow"></div>
+      <div class="size-row">
+        <span style="font-size:12px;color:rgba(32,28,26,.55)">굵기</span>
+        <input type="range" id="brushSize" min="2" max="26" value="8">
+        <button class="mini-btn" id="clearDrawBtn">전체 지우기</button>
+      </div>
+      <div class="decorate-canvas-wrap">
+        <canvas id="baseCanvas"></canvas>
+        <canvas id="drawCanvas"></canvas>
+      </div>
+    </section>
+
+    <!-- RESULT -->
+    <section class="screen" id="result-screen" data-step="result">
+      <div class="eyebrow">Complete</div>
+      <h2 class="stepTitle">완성됐어요!</h2>
+      <p class="sub">사진을 저장하거나 QR코드로 간편하게 가져가세요.</p>
+      <img id="resultImg" alt="완성된 사진">
+      <div class="result-btn-row">
+        <button class="primary-btn pink" id="downloadBtn">이미지 저장</button>
+        <button class="primary-btn" id="qrBtn" style="background:#fff;color:var(--ink);border:2px solid var(--line);">QR 만들기</button>
+      </div>
+      <button class="primary-btn" id="restartBtn" style="background:transparent;color:rgba(32,28,26,.5);font-weight:700;">처음부터 다시 만들기</button>
+      <div id="qrBox">
+        <div id="qrCanvasHolder"></div>
+        <p class="qr-note">QR은 미리보기용 저해상도 이미지예요. 원본 화질은 [이미지 저장] 버튼을 이용해주세요.</p>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<div id="flash"></div>
+<div id="edgeArrow">‹</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  /* ===================== CONFIG ===================== */
+  var STEPS = ['home','count','style','filter','capture','select','decorate','result'];
+  var PALETTE = ['#FF4667','#FFC94A','#3FCBA0','#4AA3FF','#B388FF','#FF8AB4','#182238','#FFFFFF','#F4EFE6','#2E2A28'];
+  var COUNT_OPTIONS = [
+    {n:2, cols:1, rows:2},
+    {n:4, cols:1, rows:4},
+    {n:6, cols:2, rows:3},
+    {n:9, cols:3, rows:3}
+  ];
+  var FILTERS = [
+    {id:'none',   label:'없음',   css:'none'},
+    {id:'mono',   label:'모노',   css:'grayscale(1) contrast(1.08)'},
+    {id:'warm',   label:'따뜻하게', css:'sepia(.28) saturate(1.35) brightness(1.05)'},
+    {id:'cool',   label:'시원하게', css:'saturate(1.15) brightness(1.05) hue-rotate(195deg)'},
+    {id:'vintage',label:'빈티지', css:'sepia(.4) contrast(.92) brightness(.92) saturate(.8)'},
+    {id:'soft',   label:'소프트', css:'brightness(1.12) contrast(.9) saturate(1.05)'}
+  ];
+  var SLOT_W = 220, SLOT_H = 293, GAP = 14, PAD = 26, FOOTER = 74;
+  var SHOT_W = 480, SHOT_H = 640;
+
+  /* ===================== STATE ===================== */
+  var state = {
+    stepIndex: 0,
+    count: null,
+    layout: null,
+    frameColor: PALETTE[0],
+    filter: 'none',
+    shots: [],           // captured dataURLs (raw, filtered)
+    selected: [],         // indices into shots, in slot order
+    tool: 'pen',
+    penColor: '#201C1A',
+    brushSize: 8,
+    stampChar: null,
+    finalDataUrl: null,
+    stream: null,
+    facing: 'user',
+    usingFallback: false
+  };
+
+  /* ===================== HELPERS ===================== */
+  function $(id){ return document.getElementById(id); }
+  function qs(sel, root){ return (root||document).querySelector(sel); }
+  function qsa(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+
+  function layoutFor(n){
+    var c = COUNT_OPTIONS.find(function(o){ return o.n === n; });
+    var w = PAD*2 + c.cols*SLOT_W + (c.cols-1)*GAP;
+    var h = PAD*2 + c.rows*SLOT_H + (c.rows-1)*GAP + FOOTER;
+    var slots = [];
+    for(var r=0;r<c.rows;r++){
+      for(var col=0; col<c.cols; col++){
+        slots.push({
+          x: PAD + col*(SLOT_W+GAP),
+          y: PAD + r*(SLOT_H+GAP),
+          w: SLOT_W, h: SLOT_H
+        });
+      }
+    }
+    return {cols:c.cols, rows:c.rows, w:w, h:h, slots:slots};
+  }
+
+  function coverDraw(ctx, source, sourceW, sourceH, dx, dy, dw, dh, filterCss){
+    var srcRatio = sourceW / sourceH;
+    var dstRatio = dw / dh;
+    var sx, sy, sw, sh;
+    if(srcRatio > dstRatio){
+      sh = sourceH; sw = sourceH * dstRatio;
+      sx = (sourceW - sw)/2; sy = 0;
+    } else {
+      sw = sourceW; sh = sourceW / dstRatio;
+      sx = 0; sy = (sourceH - sh)/2;
+    }
+    var prevFilter = ctx.filter;
+    if(filterCss) ctx.filter = filterCss;
+    ctx.drawImage(source, sx, sy, sw, sh, dx, dy, dw, dh);
+    ctx.filter = prevFilter || 'none';
+  }
+
+  /* ===================== FILM STEP BAR ===================== */
+  function buildFilmbar(){
+    var track = $('steps-track');
+    track.innerHTML = '';
+    for(var i=1;i<STEPS.length;i++){ // skip 'home' dot to keep it tidy, show remaining 7
+      var dot = document.createElement('div');
+      dot.className = 'sprocket';
+      dot.dataset.idx = i;
+      track.appendChild(dot);
+    }
+  }
+  function updateFilmbar(){
+    var dots = qsa('.sprocket');
+    dots.forEach(function(d){
+      var idx = parseInt(d.dataset.idx,10);
+      d.classList.toggle('active', idx === state.stepIndex);
+      d.classList.toggle('done', idx < state.stepIndex);
+    });
+    $('backbtn').classList.toggle('show', state.stepIndex > 0 && STEPS[state.stepIndex] !== 'capture-lock');
+  }
+
+  /* ===================== NAVIGATION ===================== */
+  function renderStep(){
+    var stepName = STEPS[state.stepIndex];
+    qsa('.screen').forEach(function(s){ s.classList.toggle('active', s.dataset.step === stepName); });
+    updateFilmbar();
+    if(stepName === 'style') renderStylePreview();
+    if(stepName === 'capture') enterCaptureStep();
+    else leaveCaptureStepIfNeeded(stepName);
+    if(stepName === 'select') renderSelectGrid();
+    if(stepName === 'decorate') enterDecorateStep();
+    if(stepName === 'result') renderResultStep();
+    $('stage').scrollTop = 0;
+    var activeScreen = qs('.screen.active');
+    if(activeScreen) activeScreen.scrollTop = 0;
+  }
+
+  function goNext(){
+    var stepName = STEPS[state.stepIndex];
+    if(stepName === 'count' && !state.count) return;
+    if(stepName === 'capture' && state.shots.length < state.count*2) return;
+    if(stepName === 'select' && state.selected.length !== state.count) return;
+    if(state.stepIndex < STEPS.length - 1){
+      state.stepIndex++;
+      renderStep();
+    }
+  }
+  function goBack(){
+    if(state.stepIndex > 0){
+      state.stepIndex--;
+      renderStep();
+    }
+  }
+  function goHomeReset(){
+    stopCamera();
+    state = Object.assign({}, state, {
+      stepIndex:0, count:null, layout:null, frameColor:PALETTE[0], filter:'none',
+      shots:[], selected:[], finalDataUrl:null, tool:'pen', penColor:'#201C1A',
+      brushSize:8, stampChar:null
+    });
+    $('brushSize').value = 8;
+    $('qrBox').style.display = 'none';
+    renderStep();
+  }
+
+  /* ===================== HOME ===================== */
+  $('startBtn').addEventListener('click', goNext);
+  $('backbtn').addEventListener('click', goBack);
+  $('restartBtn').addEventListener('click', goHomeReset);
+
+  /* ===================== COUNT STEP ===================== */
+  function buildCountGrid(){
+    var grid = $('countGrid');
+    grid.innerHTML = '';
+    COUNT_OPTIONS.forEach(function(opt){
+      var card = document.createElement('div');
+      card.className = 'count-card';
+      card.dataset.n = opt.n;
+      var preview = document.createElement('div');
+      preview.className = 'count-preview grid'+opt.n;
+      for(var i=0;i<opt.n;i++){
+        var cell = document.createElement('div');
+        cell.className = 'cell';
+        preview.appendChild(cell);
+      }
+      var label = document.createElement('div');
+      label.className = 'count-label';
+      label.textContent = opt.n + '컷';
+      var shotsInfo = document.createElement('div');
+      shotsInfo.className = 'count-shots';
+      shotsInfo.textContent = '촬영 ' + (opt.n*2) + '장 중 ' + opt.n + '장 선택';
+      card.appendChild(preview);
+      card.appendChild(label);
+      card.appendChild(shotsInfo);
+      card.addEventListener('click', function(n){
+        return function(){
+          state.count = n;
+          state.layout = layoutFor(n);
+          state.shots = []; state.selected = []; state.finalDataUrl = null;
+          qsa('.count-card').forEach(function(c){ c.classList.toggle('selected', parseInt(c.dataset.n,10) === n); });
+          setTimeout(goNext, 180);
+        };
+      }(opt.n));
+      grid.appendChild(card);
+    });
+  }
+
+  /* ===================== STYLE STEP ===================== */
+  function buildPalette(){
+    var row = $('paletteRow');
+    row.innerHTML = '';
+    PALETTE.forEach(function(color){
+      var sw = document.createElement('div');
+      sw.className = 'swatch';
+      sw.style.background = color;
+      sw.dataset.color = color;
+      if(color.toUpperCase() === state.frameColor.toUpperCase()) sw.classList.add('selected');
+      sw.addEventListener('click', function(){
+        state.frameColor = color;
+        $('customColor').value = color;
+        qsa('.swatch').forEach(function(s){ s.classList.remove('selected'); });
+        sw.classList.add('selected');
+        renderStylePreview();
+      });
+      row.appendChild(sw);
+    });
+  }
+  $('customColor').addEventListener('input', function(e){
+    state.frameColor = e.target.value;
+    qsa('.swatch').forEach(function(s){ s.classList.remove('selected'); });
+    renderStylePreview();
+  });
+
+  function renderStylePreview(){
+    if(!state.layout) state.layout = layoutFor(state.count || 4);
+    var canvas = $('stylePreviewCanvas');
+    var L = state.layout;
+    var scale = Math.min(220/L.w, 360/L.h);
+    canvas.width = L.w * scale; canvas.height = L.h * scale;
+    var ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.scale(scale, scale);
+    ctx.fillStyle = state.frameColor;
+    roundRect(ctx, 0,0,L.w,L.h, 18); ctx.fill();
+    L.slots.forEach(function(s){
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      roundRect(ctx, s.x, s.y, s.w, s.h, 6); ctx.fill();
+    });
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '600 20px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('PHOTO', L.w/2, L.h - FOOTER/2 + 7);
+    ctx.restore();
+  }
+  function roundRect(ctx,x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+  /* ===================== FILTER STEP ===================== */
+  function buildFilterChips(container, onSelect){
+    container.innerHTML = '';
+    FILTERS.forEach(function(f){
+      var chip = document.createElement('div');
+      chip.className = 'chip';
+      chip.textContent = f.label;
+      chip.dataset.id = f.id;
+      if(f.id === state.filter) chip.classList.add('selected');
+      chip.addEventListener('click', function(){
+        state.filter = f.id;
+        qsa('.chip', container).forEach(function(c){ c.classList.remove('selected'); });
+        chip.classList.add('selected');
+        onSelect && onSelect(f);
+      });
+      container.appendChild(chip);
+    });
+  }
+
+  /* ===================== CAPTURE STEP ===================== */
+  var video = $('camVideo');
+  var camCanvas = document.createElement('canvas');
+  camCanvas.width = SHOT_W; camCanvas.height = SHOT_H;
+
+  function currentFilterCss(){
+    var f = FILTERS.find(function(x){ return x.id === state.filter; });
+    return f ? f.css : 'none';
+  }
+
+  function enterCaptureStep(){
+    $('shotsNeededText').textContent = (state.count*2) + '장';
+    updateCamBadge();
+    renderThumbs();
+    video.style.filter = currentFilterCss();
+    updateCaptureNextBtn();
+    startCamera();
+  }
+  function leaveCaptureStepIfNeeded(currentStepName){
+    if(currentStepName !== 'capture') stopCamera();
+  }
+
+  function startCamera(){
+    if(state.stream) return;
+    if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      showFallback(); return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: state.facing }, audio:false })
+      .then(function(stream){
+        state.stream = stream;
+        video.srcObject = stream;
+        video.style.display = 'block';
+        $('captureImgPreview').style.display = 'none';
+        $('shutterBtn').style.display = '';
+        $('flipCamBtn').style.display = '';
+        $('camFallbackBtn').style.display = 'none';
+        $('camFallbackInput').removeAttribute('data-armed');
+      })
+      .catch(function(){ showFallback(); });
+  }
+  function stopCamera(){
+    if(state.stream){
+      state.stream.getTracks().forEach(function(t){ t.stop(); });
+      state.stream = null;
+    }
+  }
+  function showFallback(){
+    state.usingFallback = true;
+    video.style.display = 'none';
+    $('shutterBtn').style.display = 'none';
+    $('flipCamBtn').style.display = 'none';
+    $('camFallbackBtn').style.display = 'block';
+  }
+  $('flipCamBtn').addEventListener('click', function(){
+    state.facing = state.facing === 'user' ? 'environment' : 'user';
+    stopCamera();
+    startCamera();
+  });
+
+  function updateCamBadge(){
+    $('camCountBadge').textContent = state.shots.length + ' / ' + (state.count*2);
+  }
+  function renderThumbs(){
+    var strip = $('thumbStrip');
+    strip.innerHTML = '';
+    state.shots.forEach(function(d, idx){
+      var wrap = document.createElement('div');
+      wrap.style.position = 'relative';
+      wrap.style.flex = '0 0 auto';
+      var img = document.createElement('img');
+      img.src = d;
+      var x = document.createElement('button');
+      x.textContent = '×';
+      x.setAttribute('aria-label','삭제');
+      x.style.cssText = 'position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:var(--ink);color:#fff;border:2px solid var(--paper);font-size:12px;line-height:1;cursor:pointer;padding:0;';
+      x.addEventListener('click', function(){
+        state.shots.splice(idx,1);
+        updateCamBadge();
+        renderThumbs();
+        updateCaptureNextBtn();
+      });
+      wrap.appendChild(img);
+      wrap.appendChild(x);
+      strip.appendChild(wrap);
+    });
+  }
+  function updateCaptureNextBtn(){
+    if(captureNextBtn) captureNextBtn.disabled = state.shots.length < state.count*2;
+  }
+
+  function flashEffect(){
+    var f = $('flash');
+    f.style.opacity = '0.9';
+    setTimeout(function(){ f.style.opacity = '0'; }, 90);
+  }
+
+  function pushShot(dataUrl){
+    if(state.shots.length >= state.count*2) return;
+    state.shots.push(dataUrl);
+    updateCamBadge();
+    renderThumbs();
+    updateCaptureNextBtn();
+    if(state.shots.length >= state.count*2){
+      setTimeout(function(){
+        if(STEPS[state.stepIndex] === 'capture'){
+          state.stepIndex = STEPS.indexOf('select');
+          renderStep();
+        }
+      }, 400);
+    }
+  }
+
+  function captureFromVideo(){
+    var ctx = camCanvas.getContext('2d');
+    ctx.clearRect(0,0,SHOT_W,SHOT_H);
+    coverDraw(ctx, video, video.videoWidth || 640, video.videoHeight || 480, 0,0,SHOT_W,SHOT_H, currentFilterCss());
+    pushShot(camCanvas.toDataURL('image/jpeg', 0.9));
+  }
+
+  var countingDown = false;
+  $('shutterBtn').addEventListener('click', function(){
+    if(countingDown || state.shots.length >= state.count*2) return;
+    countingDown = true;
+    var el = $('countdownNum');
+    el.style.display = 'flex';
+    var n = 3;
+    el.textContent = n;
+    var iv = setInterval(function(){
+      n--;
+      if(n > 0){ el.textContent = n; }
+      else {
+        clearInterval(iv);
+        el.style.display = 'none';
+        flashEffect();
+        captureFromVideo();
+        countingDown = false;
+      }
+    }, 600);
+  });
+
+  $('camFallbackBtn').addEventListener('click', function(){
+    $('camFallbackInput').click();
+  });
+  $('camFallbackInput').addEventListener('change', function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var img = new Image();
+    img.onload = function(){
+      var ctx = camCanvas.getContext('2d');
+      ctx.clearRect(0,0,SHOT_W,SHOT_H);
+      coverDraw(ctx, img, img.naturalWidth, img.naturalHeight, 0,0,SHOT_W,SHOT_H, currentFilterCss());
+      flashEffect();
+      pushShot(camCanvas.toDataURL('image/jpeg', 0.9));
+      e.target.value = '';
+    };
+    img.src = URL.createObjectURL(file);
+  });
+
+  /* ===================== SELECT STEP ===================== */
+  function renderSelectGrid(){
+    var grid = $('shotsGrid');
+    grid.innerHTML = '';
+    state.shots.forEach(function(src, idx){
+      var cell = document.createElement('div');
+      cell.className = 'shot-cell';
+      var img = document.createElement('img');
+      img.src = src;
+      cell.appendChild(img);
+      var order = state.selected.indexOf(idx);
+      if(order > -1){
+        cell.classList.add('picked');
+        var badge = document.createElement('div');
+        badge.className = 'pick-badge';
+        badge.textContent = order + 1;
+        cell.appendChild(badge);
+      }
+      cell.addEventListener('click', function(){
+        var pos = state.selected.indexOf(idx);
+        if(pos > -1){
+          state.selected.splice(pos,1);
+        } else if(state.selected.length < state.count){
+          state.selected.push(idx);
+        }
+        renderSelectGrid();
+      });
+      grid.appendChild(cell);
+    });
+    $('selectStatus').textContent = state.selected.length + ' / ' + state.count + '장 선택됨';
+  }
+
+  /* ===================== DECORATE STEP ===================== */
+  var baseCanvas = $('baseCanvas');
+  var drawCanvas = $('drawCanvas');
+  var drawCtx, isDrawing = false, lastPt = null;
+
+  function buildToolRow(){
+    var row = $('toolRow');
+    row.innerHTML = '';
+    [['pen','펜'], ['eraser','지우개'], ['stamp','스티커']].forEach(function(t){
+      var btn = document.createElement('button');
+      btn.className = 'tool-btn';
+      btn.textContent = t[1];
+      btn.dataset.tool = t[0];
+      if(state.tool === t[0]) btn.classList.add('selected');
+      btn.addEventListener('click', function(){
+        state.tool = t[0];
+        qsa('.tool-btn', row).forEach(function(b){ b.classList.remove('selected'); });
+        btn.classList.add('selected');
+        $('stampRow').style.display = t[0] === 'stamp' ? 'flex' : 'none';
+        $('penColorRow').style.display = t[0] === 'eraser' ? 'none' : 'flex';
+      });
+      row.appendChild(btn);
+    });
+  }
+  function buildPenColors(){
+    var row = $('penColorRow');
+    row.innerHTML = '';
+    ['#201C1A','#FFFFFF'].concat(PALETTE).forEach(function(c){
+      var sw = document.createElement('div');
+      sw.className = 'pen-color';
+      sw.style.background = c;
+      if(c === state.penColor) sw.classList.add('selected');
+      sw.addEventListener('click', function(){
+        state.penColor = c;
+        qsa('.pen-color', row).forEach(function(s){ s.classList.remove('selected'); });
+        sw.classList.add('selected');
+      });
+      row.appendChild(sw);
+    });
+  }
+  function buildStamps(){
+    var row = $('stampRow');
+    row.innerHTML = '';
+    row.style.display = state.tool === 'stamp' ? 'flex' : 'none';
+    ['❤️','⭐','✨','😊','🎀'].forEach(function(ch){
+      var btn = document.createElement('button');
+      btn.className = 'stamp-btn';
+      btn.textContent = ch;
+      if(state.stampChar === ch) btn.classList.add('selected');
+      btn.addEventListener('click', function(){
+        state.stampChar = ch;
+        qsa('.stamp-btn', row).forEach(function(b){ b.classList.remove('selected'); });
+        btn.classList.add('selected');
+      });
+      row.appendChild(btn);
+    });
+    if(!state.stampChar) state.stampChar = '❤️';
+  }
+  $('brushSize').addEventListener('input', function(e){ state.brushSize = parseInt(e.target.value,10); });
+  $('clearDrawBtn').addEventListener('click', function(){
+    drawCtx.clearRect(0,0,drawCanvas.width, drawCanvas.height);
+  });
+
+  function enterDecorateStep(){
+    buildToolRow(); buildPenColors(); buildStamps();
+    $('penColorRow').style.display = state.tool === 'eraser' ? 'none' : 'flex';
+
+    var L = state.layout;
+    baseCanvas.width = L.w; baseCanvas.height = L.h;
+    drawCanvas.width = L.w; drawCanvas.height = L.h;
+    var bctx = baseCanvas.getContext('2d');
+    bctx.clearRect(0,0,L.w,L.h);
+    bctx.fillStyle = state.frameColor;
+    roundRect(bctx,0,0,L.w,L.h,26); bctx.fill();
+
+    var isDark = isColorDark(state.frameColor);
+    if(decorateFinishBtn) decorateFinishBtn.disabled = true;
+    var loadPromises = state.selected.map(function(shotIdx, i){
+      var slot = L.slots[i];
+      return new Promise(function(resolve){
+        var img = new Image();
+        img.onload = function(){
+          bctx.save();
+          roundRect(bctx, slot.x, slot.y, slot.w, slot.h, 8);
+          bctx.clip();
+          coverDraw(bctx, img, img.naturalWidth, img.naturalHeight, slot.x, slot.y, slot.w, slot.h, null);
+          bctx.restore();
+          resolve();
+        };
+        img.onerror = resolve;
+        img.src = state.shots[shotIdx];
+      });
+    });
+    Promise.all(loadPromises).then(function(){
+      bctx.fillStyle = isDark ? 'rgba(255,255,255,0.9)' : 'rgba(32,28,26,0.72)';
+      bctx.font = '700 26px -apple-system, sans-serif';
+      bctx.textAlign = 'center';
+      bctx.fillText('PHOTO', L.w/2, L.h - FOOTER/2 + 8);
+      if(decorateFinishBtn) decorateFinishBtn.disabled = false;
+    });
+
+    drawCtx = drawCanvas.getContext('2d');
+    drawCtx.clearRect(0,0,L.w,L.h);
+    drawCtx.lineCap = 'round';
+    drawCtx.lineJoin = 'round';
+
+    setupDrawHandlers();
+  }
+  function isColorDark(hex){
+    var c = hex.replace('#','');
+    if(c.length === 3) c = c.split('').map(function(x){return x+x;}).join('');
+    var r = parseInt(c.substr(0,2),16), g = parseInt(c.substr(2,2),16), b = parseInt(c.substr(4,2),16);
+    var lum = (0.299*r + 0.587*g + 0.114*b)/255;
+    return lum < 0.55;
+  }
+
+  var drawHandlersBound = false;
+  function getCanvasPos(evt){
+    var rect = drawCanvas.getBoundingClientRect();
+    var clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+    var clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+    var scaleX = drawCanvas.width / rect.width;
+    var scaleY = drawCanvas.height / rect.height;
+    return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+  }
+  function pointerDown(e){
+    e.preventDefault();
+    var p = getCanvasPos(e);
+    if(state.tool === 'stamp'){
+      drawCtx.font = (state.brushSize*4) + 'px sans-serif';
+      drawCtx.textAlign = 'center';
+      drawCtx.textBaseline = 'middle';
+      drawCtx.fillText(state.stampChar, p.x, p.y);
+      return;
+    }
+    isDrawing = true;
+    lastPt = p;
+    drawCtx.globalCompositeOperation = state.tool === 'eraser' ? 'destination-out' : 'source-over';
+    drawCtx.strokeStyle = state.penColor;
+    drawCtx.lineWidth = state.brushSize;
+    drawCtx.beginPath();
+    drawCtx.moveTo(p.x, p.y);
+  }
+  function pointerMove(e){
+    if(!isDrawing) return;
+    e.preventDefault();
+    var p = getCanvasPos(e);
+    drawCtx.lineTo(p.x, p.y);
+    drawCtx.stroke();
+    lastPt = p;
+  }
+  function pointerUp(){ isDrawing = false; }
+  function setupDrawHandlers(){
+    if(drawHandlersBound) return;
+    drawHandlersBound = true;
+    drawCanvas.addEventListener('mousedown', pointerDown);
+    drawCanvas.addEventListener('mousemove', pointerMove);
+    window.addEventListener('mouseup', pointerUp);
+    drawCanvas.addEventListener('touchstart', pointerDown, {passive:false});
+    drawCanvas.addEventListener('touchmove', pointerMove, {passive:false});
+    drawCanvas.addEventListener('touchend', pointerUp);
+  }
+
+  function finishDecorate(){
+    var L = state.layout;
+    var out = document.createElement('canvas');
+    out.width = L.w; out.height = L.h;
+    var octx = out.getContext('2d');
+    octx.drawImage(baseCanvas, 0, 0);
+    octx.drawImage(drawCanvas, 0, 0);
+    state.finalDataUrl = out.toDataURL('image/png');
+    goNext();
+  }
+
+  /* ===================== RESULT STEP ===================== */
+  function renderResultStep(){
+    $('resultImg').src = state.finalDataUrl;
+    $('qrBox').style.display = 'none';
+    $('qrCanvasHolder').innerHTML = '';
+  }
+  $('downloadBtn').addEventListener('click', function(){
+    var a = document.createElement('a');
+    a.href = state.finalDataUrl;
+    a.download = 'photo-booth.png';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  });
+  $('qrBtn').addEventListener('click', function(){
+    generateQr();
+  });
+
+  function generateQr(){
+    var holder = $('qrCanvasHolder');
+    holder.innerHTML = '';
+    $('qrBox').style.display = 'flex';
+
+    var img = new Image();
+    img.onload = function(){
+      var w = 140, h = Math.round(140 * img.naturalHeight/img.naturalWidth);
+      var quality = 0.5;
+      var attempt = 0;
+      var text = '';
+      while(attempt < 10){
+        var c = document.createElement('canvas');
+        c.width = Math.max(20, Math.round(w));
+        c.height = Math.max(20, Math.round(h));
+        var cctx = c.getContext('2d');
+        cctx.drawImage(img, 0, 0, c.width, c.height);
+        text = c.toDataURL('image/jpeg', quality);
+        if(text.length <= 2200) break;
+        w *= 0.8; h *= 0.8; quality = Math.max(0.2, quality - 0.05);
+        attempt++;
+      }
+      try{
+        new QRCode(holder, { text: text, width: 180, height: 180, correctLevel: QRCode.CorrectLevel.L });
+      }catch(err){
+        holder.innerHTML = '<p style="font-size:12px;color:rgba(32,28,26,.55);max-width:200px;">이 사진은 QR로 담기엔 너무 커요. [이미지 저장]을 이용해주세요.</p>';
+      }
+    };
+    img.src = state.finalDataUrl;
+  }
+
+  /* ===================== NEXT BUTTONS PER SCREEN ===================== */
+  function attachFooterCta(stepName, screenEl, opts){
+    var btn = document.createElement('button');
+    btn.className = 'primary-btn pink footer-cta';
+    btn.textContent = opts.label;
+    btn.addEventListener('click', opts.onClick);
+    screenEl.appendChild(btn);
+    opts.updateFn && opts.updateFn(btn);
+    return btn;
+  }
+
+  // style screen next
+  attachFooterCta('style', $('style-screen'), { label:'다음', onClick: goNext });
+  // filter screen next
+  attachFooterCta('filter', $('filter-screen'), { label:'다음', onClick: goNext });
+  // capture screen next (needed when returning via back navigation with shots already complete)
+  var captureNextBtn = attachFooterCta('capture', $('capture-screen'), { label:'다음', onClick: goNext });
+  captureNextBtn.disabled = true;
+  // select screen next
+  var selectBtn = attachFooterCta('select', $('select-screen'), { label:'다음', onClick: goNext });
+  var _origRenderSelectGrid = renderSelectGrid;
+  renderSelectGrid = function(){
+    _origRenderSelectGrid();
+    selectBtn.disabled = state.selected.length !== state.count;
+  };
+  // decorate screen finish
+  var decorateFinishBtn = attachFooterCta('decorate', $('decorate-screen'), { label:'완료했어요', onClick: finishDecorate });
+
+  /* ===================== INIT ===================== */
+  buildFilmbar();
+  buildCountGrid();
+  buildPalette();
+  buildFilterChips($('filterChips'));
+  buildFilterChips($('filterChipsCapture'), function(){
+    video.style.filter = currentFilterCss();
+  });
+  renderStep();
+
+  /* ===================== iOS-STYLE EDGE SWIPE BACK ===================== */
+  var edgeTouchStartX = null, edgeTouchStartY = null, edgeActive = false;
+  var EDGE_ZONE = 24, EDGE_TRIGGER = 70;
+
+  document.addEventListener('touchstart', function(e){
+    var stepName = STEPS[state.stepIndex];
+    if(stepName === 'home' || stepName === 'decorate') return;
+    var t = e.touches[0];
+    if(t.clientX <= EDGE_ZONE){
+      edgeTouchStartX = t.clientX;
+      edgeTouchStartY = t.clientY;
+      edgeActive = true;
+    } else {
+      edgeActive = false;
+    }
+  }, {passive:true});
+
+  document.addEventListener('touchmove', function(e){
+    if(!edgeActive) return;
+    var t = e.touches[0];
+    var dx = t.clientX - edgeTouchStartX;
+    var dy = Math.abs(t.clientY - edgeTouchStartY);
+    if(dx > 10 && dy < 60){
+      var arrow = $('edgeArrow');
+      var progress = Math.min(1, dx / EDGE_TRIGGER);
+      arrow.style.opacity = String(progress);
+      arrow.style.transform = 'translateY(-50%) translateX(' + (-40 + progress*70) + 'px)';
+    }
+  }, {passive:true});
+
+  document.addEventListener('touchend', function(e){
+    if(!edgeActive) return;
+    var arrow = $('edgeArrow');
+    var t = e.changedTouches[0];
+    var dx = t.clientX - edgeTouchStartX;
+    var dy = Math.abs(t.clientY - edgeTouchStartY);
+    arrow.style.opacity = '0';
+    arrow.style.transform = 'translateY(-50%) translateX(-40px)';
+    if(dx > EDGE_TRIGGER && dy < 60){
+      goBack();
+    }
+    edgeActive = false;
+  }, {passive:true});
+
+})();
+</script>
+</body>
+</html>
